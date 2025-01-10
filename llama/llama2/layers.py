@@ -3,8 +3,8 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from llama.llama2.config import LlamaConfig
-from llama.llama2.utils import apply_rotary_embedding, repeat_kv
+from config import LlamaConfig
+from utils import apply_rotary_embedding, repeat_kv
 
 
 class RMSNorm(nn.Module):
@@ -91,8 +91,7 @@ class FeedForward(nn.Module):
         if args.ffn_dim_multiplier is not None:
             hidden_dim = int(args.ffn_dim_multiplier * args.dim)
 
-        hidden = args.multiple_of * \
-            ((hidden_dim + args.multiple_of - 1) // args.multiple_of)
+        hidden = args.multiple_of * ((hidden_dim + args.multiple_of - 1) // args.multiple_of)
 
         self.w1 = nn.Linear(args.dim, hidden, bias=False)
         self.w2 = nn.Linear(hidden, args.dim, bias=False)
@@ -100,10 +99,7 @@ class FeedForward(nn.Module):
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         swish = F.silu(self.w1(x))
-        x_V = self.w3(swish)
-        x = swish * x_V
-        x = self.w2(x)
-        return x
+        return self.w2(swish) + self.w3(x)
 
 
 class EncoderBlock(nn.Module):

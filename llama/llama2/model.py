@@ -1,11 +1,9 @@
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
-import math
 
-from llama.llama2.config import LlamaConfig
-from llama.llama2.layers import RMSNorm, SelfAttention, FeedForward, EncoderBlock
-from llama.llama2.utils import precompute_theta_pos_frequencies
+from config import LlamaConfig
+from layers import RMSNorm, EncoderBlock
+from utils import precompute_theta_pos_frequencies
 
 
 class Transformer(nn.Module):
@@ -48,4 +46,9 @@ class Transformer(nn.Module):
 if __name__ == '__main__':
     args = LlamaConfig()
     model = Transformer(args)
-    print(f"LLAMA2 loaded with {sum(p.numel() for p in model.parameters()) / 1e6} M parameters")
+    print(f"Llama 2 - 8B loaded with {sum(p.numel() for p in model.parameters()) / 1e6} M parameters")
+
+    # Test the model
+    tokens = torch.randint(0, args.vocab_size, (args.max_batch_size, 1))
+    logits = model(tokens, 0)
+    print(logits.shape)

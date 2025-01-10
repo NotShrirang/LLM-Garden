@@ -1,7 +1,7 @@
 import torch
 
 
-def precompute_theta_pos_frequencies(head_dim: int, seq_len: int, device: str, theta: float = 10000.0) -> torch.Tensor:
+def precompute_theta_pos_frequencies(head_dim: int, seq_len: int, device: str, theta: float = 500000.0) -> torch.Tensor:
     assert head_dim % 2 == 0, "head_dim must be divisible by 2"
 
     theta_numerator = torch.arange(0, head_dim, 2, device=device).float()
