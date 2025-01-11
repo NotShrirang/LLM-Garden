@@ -95,7 +95,7 @@ class FeedForward(nn.Module):
 
         self.w1 = nn.Linear(args.dim, hidden, bias=False)
         self.w2 = nn.Linear(hidden, args.dim, bias=False)
-        self.w3 = nn.Linear(args.dim, hidden, bias=False)
+        self.w3 = nn.Linear(args.dim, args.dim, bias=False)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         swish = F.silu(self.w1(x))

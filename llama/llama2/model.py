@@ -1,14 +1,14 @@
 import torch
 import torch.nn as nn
 
-from config import LlamaConfig
+from config import Llama2Config
 from layers import RMSNorm, EncoderBlock
 from utils import precompute_theta_pos_frequencies
 
 
 class Llama2(nn.Module):
 
-    def __init__(self, args: LlamaConfig):
+    def __init__(self, args: Llama2Config):
         super().__init__()
 
         assert args.vocab_size != -1, "Vocab size must be set"
@@ -44,7 +44,7 @@ class Llama2(nn.Module):
 
 
 if __name__ == '__main__':
-    args = LlamaConfig()
+    args = Llama2Config()
     model = Llama2(args)
     print(f"Llama 2 - 8B loaded with {sum(p.numel() for p in model.parameters()) / 1e6} M parameters")
 
