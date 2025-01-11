@@ -3,8 +3,8 @@ import torch
 from torch import nn
 from typing import Optional, Tuple
 
-from gemma.gemma2.config import GemmaConfig
-from gemma.gemma2.utils import KVCache, repeat_kv, apply_rotary_pos_emb, build_positions_from_mask
+from config import Gemma2Config
+from utils import KVCache, repeat_kv, apply_rotary_pos_emb, build_positions_from_mask
 
 
 class GemmaRMSNorm(nn.Module):
@@ -27,7 +27,7 @@ class GemmaRMSNorm(nn.Module):
 
 
 class GemmaMLP(nn.Module):
-    def __init__(self, config: GemmaConfig):
+    def __init__(self, config: Gemma2Config):
         super().__init__()
         self.config = config
         self.hidden_size = config.hidden_size
@@ -71,7 +71,7 @@ class GemmaRotaryEmbedding(nn.Module):
 
 
 class GemmaAttention(nn.Module):
-    def __init__(self, config: GemmaConfig, layer_idx: Optional[int] = None):
+    def __init__(self, config: Gemma2Config, layer_idx: Optional[int] = None):
         super().__init__()
         self.config = config
         self.layer_idx = layer_idx
@@ -105,9 +105,7 @@ class GemmaAttention(nn.Module):
         kv_cache: Optional[KVCache] = None,
         **kwargs
     ) -> Tuple[torch.Tensor, Optional[torch.Tensor], Optional[Tuple[torch.Tensor]]]:
-        print(hidden_states.size())
         bsz, q_len, hidden_size = hidden_states.size()
-        print(f"Batch_Size: {bsz}, Seq_Len: {q_len}, Hidden_Size: {hidden_size}, Head_Dim: {self.head_dim}")
         bsz = len(hidden_states)
         num_input_tokens = [len(input_ids) for input_ids in hidden_states]
         token_buffer = torch.full(
@@ -119,12 +117,9 @@ class GemmaAttention(nn.Module):
         for i, (input_ids, num_tokens) in enumerate(
             zip(hidden_states, num_input_tokens)
         ):
-            print(f"input_ids: {input_ids.size()}")
-            print(f"token_buffer: {token_buffer.size()}")
             token_buffer[0, i:i+num_tokens] = input_ids[0, :num_tokens]
             input_mask[0, i:i+num_tokens] = (input_ids[0, :num_tokens] != 0)
         position_ids = build_positions_from_mask(input_mask)
-        print(f"position_ids: {position_ids.size()}")
         query_states = self.q_proj(hidden_states)
         key_states = self.k_proj(hidden_states)
         value_states = self.v_proj(hidden_states)
@@ -135,17 +130,8 @@ class GemmaAttention(nn.Module):
         value_states = value_states.view(bsz, q_len, self.num_key_value_heads, self.head_dim).transpose(1, 2)
 
         cos, sin = self.rotary_emb(value_states, position_ids, seq_len=None)
-        print(f"[Batch_Size: {bsz}, Num_Heads_Q: {self.num_heads}, Seq_Len: {q_len}, Head_Dim: {self.head_dim}]")
-        print(f"query_states: {query_states.size()}")
-        print(f"[Batch_Size: {bsz}, Num_Heads_KV: {self.num_key_value_heads}, Seq_Len: {q_len}, Head_Dim: {self.head_dim}]")
-        print(f"key_states:  {key_states.size()}")
-
-        print(f"cos: {cos.size()}")
-        print(f"sin: {sin.size()}")
         # [Batch_Size, Seq_Len, Head_Dim], [Batch_Size, Seq_Len, Head_Dim]
         query_states, key_states = apply_rotary_pos_emb(query_states, key_states, cos, sin)
-        print(f"query_states: {query_states.size()}")
-        print(f"key_states:  {key_states.size()}")
 
         if kv_cache is not None:
             key_states, value_states = kv_cache.update(key_states, value_states, self.layer_idx)
@@ -180,7 +166,7 @@ class GemmaAttention(nn.Module):
 
 
 class GemmaDecoderLayer(nn.Module):
-    def __init__(self, config: GemmaConfig, layer_idx: int):
+    def __init__(self, config: Gemma2Config, layer_idx: int):
         super().__init__()
         self.hidden_size = config.hidden_size
 

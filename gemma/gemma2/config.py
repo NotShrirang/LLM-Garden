@@ -2,7 +2,7 @@
 Contains GemmaConfig, configuration for Gemma model.
 """
 
-class GemmaConfig:
+class Gemma2Config:
     def __init__(
         self,
         vocab_size,

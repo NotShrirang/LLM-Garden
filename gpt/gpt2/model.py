@@ -6,7 +6,7 @@ from gpt.gpt2.layers import Block
 from gpt.gpt2.config import GPTConfig
 
 
-class GPT(nn.Module):
+class GPT2(nn.Module):
 
     def __init__(self, config):
         super().__init__()
@@ -55,5 +55,5 @@ class GPT(nn.Module):
 
 if __name__ == '__main__':
     config = GPTConfig()
-    model = GPT(config)
+    model = GPT2(config)
     print(f"GPT2 (small) loaded with {sum(p.numel() for p in model.parameters()) / 1e6} M parameters")

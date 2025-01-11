@@ -4,7 +4,7 @@ import torch
 
 
 @dataclass
-class LlamaConfig:
+class Llama2Config:
     dim: int = 4096
     n_layers: int = 32
     n_heads: int = 32

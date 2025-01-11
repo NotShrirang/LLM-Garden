@@ -39,8 +39,6 @@ def repeat_kv(hidden_states: torch.Tensor, n_rep: int) -> torch.Tensor:
 def rotate_half(x):
     x1 = x[..., : x.shape[-1] // 2]
     x2 = x[..., x.shape[-1] // 2 :]
-    print(f"x1 shape: {x1.size()}")
-    print(f"x2 shape: {x2.size()}")
     return torch.cat((-x2, x1), dim=-1)
 
 
@@ -50,21 +48,9 @@ def apply_rotary_pos_emb(q, k, cos, sin, unsqueeze_dims=1):
 
     assert q.shape[-1] == cos.shape[-1], f"q shape {q.shape} and cos shape {cos.shape} mismatch."
     assert k.shape[-1] == cos.shape[-1], f"k shape {k.shape} and cos shape {cos.shape} mismatch."
-
-    print(f"\nq shape: {q.shape}")
-    print(f"cos shape: {cos.shape}")
-
-    print(f"k shape: {k.shape}")
-    print(f"sin shape: {sin.shape}")
     
-    try:
-        q_embed = (q * cos) + (rotate_half(q) * sin)
-        k_embed = (k * cos) + (rotate_half(k) * sin)
-    except RuntimeError as e:
-        print(f"Error: {e}")
-        print(f"q shape: {q.shape}")
-        print(f"cos shape: {cos.shape}")
-        exit(1)
+    q_embed = (q * cos) + (rotate_half(q) * sin)
+    k_embed = (k * cos) + (rotate_half(k) * sin)
 
     return q_embed, k_embed
 

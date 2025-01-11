@@ -2,13 +2,13 @@ import torch
 import torch.nn as nn
 from typing import Optional, Tuple
 
-from gemma.gemma2.config import GemmaConfig
-from gemma.gemma2.layers import GemmaRMSNorm, GemmaDecoderLayer
-from gemma.gemma2.utils import KVCache
+from config import Gemma2Config
+from layers import GemmaRMSNorm, GemmaDecoderLayer
+from utils import KVCache
 
 
-class GemmaModel(nn.Module):
-    def __init__(self, config: GemmaConfig):
+class Gemma2Model(nn.Module):
+    def __init__(self, config: Gemma2Config):
         super().__init__()
         self.config = config
         self.padding_idx = config.pad_token_id
@@ -32,7 +32,6 @@ class GemmaModel(nn.Module):
         hidden_states = self.embedding(idx)
         normalizer = torch.tensor(self.config.hidden_size**0.5, dtype=hidden_states.dtype)
         hidden_states = hidden_states * normalizer
-        print(f"hidden_states shape: {hidden_states.size()}")
 
         for decoder_layer in self.layers:
             hidden_states = decoder_layer(
@@ -44,11 +43,12 @@ class GemmaModel(nn.Module):
         hidden_states = self.norm(hidden_states)
         return hidden_states
 
-class GemmaForCausalLM(nn.Module):
-    def __init__(self, config: GemmaConfig):
+
+class Gemma2ForCausalLM(nn.Module):
+    def __init__(self, config: Gemma2Config):
         super().__init__()
         self.config = config
-        self.model = GemmaModel(config)
+        self.model = Gemma2Model(config)
         self.vocab_size = config.vocab_size
         self.lm_head = nn.Linear(config.hidden_size, config.vocab_size, bias=False)
 
@@ -126,3 +126,21 @@ class GemmaForCausalLM(nn.Module):
             kv_cache = outputs["kv_cache"]
 
         return input_ids
+
+
+if __name__ == '__main__':
+    args = Gemma2Config(
+        vocab_size=256000,
+        hidden_size=2304,
+        intermediate_size=9216,
+        num_hidden_layers=26,
+        num_attention_heads=8,
+        num_key_value_heads=4,
+    )
+    model = Gemma2ForCausalLM(args)
+    print(f"Gemma 2 - 2B loaded with {sum(p.numel() for p in model.parameters()) / 1e6} M parameters")
+
+    # Test the model
+    tokens = torch.randint(0, args.vocab_size, (args.hidden_size, 1))
+    logits = model.generate(tokens, 10)
+    print(logits.shape)

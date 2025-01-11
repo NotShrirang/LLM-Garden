@@ -6,7 +6,7 @@ from layers import RMSNorm, EncoderBlock
 from utils import precompute_theta_pos_frequencies
 
 
-class Transformer(nn.Module):
+class Llama2(nn.Module):
 
     def __init__(self, args: LlamaConfig):
         super().__init__()
@@ -45,7 +45,7 @@ class Transformer(nn.Module):
 
 if __name__ == '__main__':
     args = LlamaConfig()
-    model = Transformer(args)
+    model = Llama2(args)
     print(f"Llama 2 - 8B loaded with {sum(p.numel() for p in model.parameters()) / 1e6} M parameters")
 
     # Test the model

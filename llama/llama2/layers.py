@@ -3,7 +3,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from config import LlamaConfig
+from config import Llama2Config
 from utils import apply_rotary_embedding, repeat_kv
 
 
@@ -22,7 +22,7 @@ class RMSNorm(nn.Module):
 
 
 class SelfAttention(nn.Module):
-    def __init__(self, args: LlamaConfig) -> None:
+    def __init__(self, args: Llama2Config) -> None:
         super().__init__()
 
         self.n_kv_heads = args.n_kv_heads if args.n_kv_heads is not None else args.n_heads
@@ -83,7 +83,7 @@ class SelfAttention(nn.Module):
 
 
 class FeedForward(nn.Module):
-    def __init__(self, args: LlamaConfig) -> None:
+    def __init__(self, args: Llama2Config) -> None:
         super().__init__()
 
         hidden_dim = 4 * args.dim
@@ -103,7 +103,7 @@ class FeedForward(nn.Module):
 
 
 class EncoderBlock(nn.Module):
-    def __init__(self, args: LlamaConfig) -> None:
+    def __init__(self, args: Llama2Config) -> None:
         super().__init__()
 
         self.n_heads = args.n_heads
