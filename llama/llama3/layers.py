@@ -25,18 +25,23 @@ class SelfAttention(nn.Module):
     def __init__(self, args: Llama3Config) -> None:
         super().__init__()
 
-        self.n_kv_heads = args.n_kv_heads if args.n_kv_heads is not None else args.n_heads
-        self.n_heads_q = args.n_heads
-        self.n_rep = self.n_heads_q // self.n_kv_heads
+        assert args.dim % args.n_heads == 0, "embedding_dim (args.dim) must be divisible by attention heads (args.n_heads)"
+        assert args.n_heads % args.n_kv_heads == 0, "attention heads (args.n_heads) must be divisible by number of kv heads (args.n_kv_heads)"
+
+        self.dim = args.dim
+        self.num_heads = args.n_heads
+        
 
         self.head_dim = args.dim // args.n_heads
 
-        self.wq = nn.Linear(args.dim, args.n_heads * self.head_dim, bias=False)
-        self.wk = nn.Linear(args.dim, self.n_kv_heads *
-                            self.head_dim, bias=False)
-        self.wv = nn.Linear(args.dim, self.n_kv_heads *
-                            self.head_dim, bias=False)
-        self.wo = nn.Linear(args.n_heads * self.head_dim, args.dim, bias=False)
+        self.wk = nn.Linear(args.dim, self.n_kv_heads * self.head_dim, bias=False, dtype=args.device)
+        self.wv = nn.Linear(args.dim, self.n_kv_heads * self.head_dim, bias=False, dtype=args.device)
+
+        self.n_kv_heads = args.n_kv_heads
+        self.group_size = self.num_heads // self.n_kv_heads
+        
+        self.wq = nn.Linear(args.dim, args.dim, bias=False, dtype=args.device)
+        self.out_proj = nn.Linear(args.dim, args.dim, bias=False)
 
         self.cache_k = torch.zeros(
             (args.max_batch_size, args.max_seq_len, self.n_kv_heads, self.head_dim))
@@ -44,13 +49,13 @@ class SelfAttention(nn.Module):
             (args.max_batch_size, args.max_seq_len, self.n_kv_heads, self.head_dim))
 
     def forward(self, x: torch.Tensor, start_pos: int, freqs_complex: torch.Tensor) -> torch.Tensor:
-        batch_size, seq_len, _ = x.shape
+        batch_size, seq_len, embed_dim = x.shape
 
         xq = self.wq(x)
         xk = self.wk(x)
         xv = self.wv(x)
 
-        xq = xq.view(batch_size, seq_len, self.n_heads_q, self.head_dim)
+        xq = xq.view(batch_size, seq_len, self.num_heads, self.head_dim)
         xk = xk.view(batch_size, seq_len, self.n_kv_heads, self.head_dim)
         xv = xv.view(batch_size, seq_len, self.n_kv_heads, self.head_dim)
 
@@ -98,8 +103,8 @@ class FeedForward(nn.Module):
         self.w3 = nn.Linear(args.dim, args.dim, bias=False)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        swish = F.silu(self.w1(x))
-        return self.w2(swish) + self.w3(x)
+        silu = F.silu(self.w1(x))
+        return self.w2(silu) + self.w3(x)
 
 
 class EncoderBlock(nn.Module):
