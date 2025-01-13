@@ -21,7 +21,7 @@ class RMSNorm(nn.Module):
         return self.weight * self._norm(x).type_as(x)
 
 
-class SelfAttention(nn.Module):
+class GroupedQueryAttention(nn.Module):
     def __init__(self, args: Llama3Config) -> None:
         super().__init__()
 
@@ -30,14 +30,13 @@ class SelfAttention(nn.Module):
 
         self.dim = args.dim
         self.num_heads = args.n_heads
-        
+        self.n_kv_heads = args.n_kv_heads        
 
         self.head_dim = args.dim // args.n_heads
 
         self.wk = nn.Linear(args.dim, self.n_kv_heads * self.head_dim, bias=False, dtype=args.device)
         self.wv = nn.Linear(args.dim, self.n_kv_heads * self.head_dim, bias=False, dtype=args.device)
 
-        self.n_kv_heads = args.n_kv_heads
         self.group_size = self.num_heads // self.n_kv_heads
         
         self.wq = nn.Linear(args.dim, args.dim, bias=False, dtype=args.device)
@@ -69,8 +68,8 @@ class SelfAttention(nn.Module):
         keys = self.cache_k[:batch_size, :start_pos + seq_len]
         values = self.cache_v[:batch_size, :start_pos + seq_len]
 
-        keys = repeat_kv(keys, self.n_rep)
-        values = repeat_kv(values, self.n_rep)
+        keys = repeat_kv(keys, self.group_size)
+        values = repeat_kv(values, self.group_size)
 
         xq = xq.transpose(1, 2)
         keys = keys.transpose(1, 2)
@@ -84,7 +83,7 @@ class SelfAttention(nn.Module):
         output = (output.transpose(1, 2).contiguous().view(
             batch_size, seq_len, -1))
 
-        return self.wo(output)
+        return self.out_proj(output)
 
 
 class FeedForward(nn.Module):
@@ -115,7 +114,7 @@ class EncoderBlock(nn.Module):
         self.dim = args.dim
         self.head_dims = args.dim // args.n_heads
 
-        self.attention = SelfAttention(args)
+        self.attention = GroupedQueryAttention(args)
         self.feed_forward = FeedForward(args)
         self.attention_norm = RMSNorm(args.dim, eps=args.norm_eps)
         self.ffn_norm = RMSNorm(args.dim, eps=args.norm_eps)
