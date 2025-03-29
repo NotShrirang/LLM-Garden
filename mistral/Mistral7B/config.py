@@ -3,17 +3,18 @@ from typing import Optional
 
 
 @dataclass
-class Llama2Config:
+class MistralConfig:
     dim: int = 4096
     n_layers: int = 32
+    head_dim: int = 128
+    hidden_dim: int = 14336
     n_heads: int = 32
     n_kv_heads: Optional[int] = 8
-    vocab_size: int = 128000
-    multiple_of: int = 256
-    ffn_dim_multiplier: Optional[float] = None
+    window_size: int = 4096
+    context_length: int = 8192
+    vocab_size: int = 32000
+    
     norm_eps: float = 1e-5
-
     max_batch_size: int = 32
-    max_seq_len: int = 2048
 
     device: str = None

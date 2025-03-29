@@ -2,8 +2,8 @@ import torch
 import torch.nn as nn
 from torch.nn import functional as F
 
-from gpt.gpt2.layers import Block
-from gpt.gpt2.config import GPTConfig
+from layers import Block
+from config import GPTConfig
 
 
 class GPT2(nn.Module):
@@ -56,4 +56,9 @@ class GPT2(nn.Module):
 if __name__ == '__main__':
     config = GPTConfig()
     model = GPT2(config)
-    print(f"GPT2 (small) loaded with {sum(p.numel() for p in model.parameters()) / 1e6} M parameters")
+    print(f"GPT2 (small) loaded with {sum(p.numel() for p in model.parameters()) / 1e6} M parameters")\
+    
+    x = torch.randint(0, config.vocab_size, (2, 10), dtype=torch.long)
+    logits = model(x)
+    print(f"Input shape: {x.shape}")
+    print(f"Logits shape: {logits.shape}")
