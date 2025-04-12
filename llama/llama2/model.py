@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 
 from config import Llama2Config
-from layers import RMSNorm, EncoderBlock
+from layers import RMSNorm, DecoderBlock
 from utils import precompute_theta_pos_frequencies
 
 
@@ -20,7 +20,7 @@ class Llama2(nn.Module):
 
         self.layers = nn.ModuleList()
         for layer_id in range(args.n_layers):
-            self.layers.append(EncoderBlock(args))
+            self.layers.append(DecoderBlock(args))
 
         self.norm = RMSNorm(args.dim, eps=args.norm_eps)
         self.output = nn.Linear(args.dim, self.vocab_size, bias=False)

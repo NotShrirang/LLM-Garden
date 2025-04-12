@@ -11,14 +11,13 @@ class RMSNorm(nn.Module):
     def __init__(self, dim: int, eps: float = 1e-6):
         super().__init__()
         self.eps = eps
-        # The gamma parameter
         self.weight = nn.Parameter(torch.ones(dim))
 
     def _norm(self, x: torch.Tensor) -> torch.Tensor:
         return x / torch.rsqrt(x.pow(2).mean(-1, keepdim=True) + self.eps)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        return self.weight * self._norm(x).type_as(x)
+        return self.weight * self._norm(x)
 
 
 class SelfAttention(nn.Module):
@@ -38,10 +37,8 @@ class SelfAttention(nn.Module):
                             self.head_dim, bias=False)
         self.wo = nn.Linear(args.n_heads * self.head_dim, args.dim, bias=False)
 
-        self.cache_k = torch.zeros(
-            (args.max_batch_size, args.max_seq_len, self.n_kv_heads, self.head_dim))
-        self.cache_v = torch.zeros(
-            (args.max_batch_size, args.max_seq_len, self.n_kv_heads, self.head_dim))
+        self.register_buffer("cache_k", torch.zeros((args.max_batch_size, args.max_seq_len, self.n_kv_heads, self.head_dim)), persistent=False)
+        self.register_buffer("cache_v", torch.zeros((args.max_batch_size, args.max_seq_len, self.n_kv_heads, self.head_dim)), persistent=False)
 
     def forward(self, x: torch.Tensor, start_pos: int, freqs_complex: torch.Tensor) -> torch.Tensor:
         batch_size, seq_len, _ = x.shape
@@ -73,6 +70,12 @@ class SelfAttention(nn.Module):
 
         scores = torch.matmul(
             xq, keys.transpose(-2, -1)) / math.sqrt(self.head_dim)
+        attn_len = keys.size(2)
+        mask = torch.triu(
+            torch.full((seq_len, attn_len), float('-inf'), device=x.device),
+            diagonal=1
+        )
+        scores = scores + mask
         scores = F.softmax(scores.float(), dim=-1).type_as(xq)
 
         output = torch.matmul(scores, values)
@@ -102,13 +105,12 @@ class FeedForward(nn.Module):
         return self.w2(swish) + self.w3(x)
 
 
-class EncoderBlock(nn.Module):
+class DecoderBlock(nn.Module):
     def __init__(self, args: Llama2Config) -> None:
         super().__init__()
 
         self.n_heads = args.n_heads
         self.dim = args.dim
-        self.head_dims = args.dim // args.n_heads
 
         self.attention = SelfAttention(args)
         self.feed_forward = FeedForward(args)
@@ -116,7 +118,6 @@ class EncoderBlock(nn.Module):
         self.ffn_norm = RMSNorm(args.dim, eps=args.norm_eps)
 
     def forward(self, x: torch.Tensor, start_pos: int, freqs_complex: torch.Tensor) -> torch.Tensor:
-        h = x + self.attention.forward(
-            self.attention_norm(x), start_pos, freqs_complex)
-        out = h + self.feed_forward.forward(self.ffn_norm(h))
+        h = x + self.attention(self.attention_norm(x), start_pos, freqs_complex)
+        out = h + self.feed_forward(self.ffn_norm(h))
         return out
